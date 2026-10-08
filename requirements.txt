@@ -1,0 +1,5 @@
+litert-lm==0.18.0
+litert-lm-api==0.18.0
+osxphotos==0.77.2
+numpy==2.5.3
+pillow==12.3.0

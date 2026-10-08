@@ -1,0 +1,14 @@
+PHOTO TIDY - first open
+
+1. Drag "Photo Tidy" into the Applications folder and open it.
+
+2. Use "Check this Mac" and "Check access" on the welcome screen. If library
+   access is blocked, enable Photo Tidy in System Settings > Privacy & Security
+   > Full Disk Access, then reopen the app.
+
+3. Download Model gets EmbeddingGemma 2 (about 485 MB, once). You can scan
+   and search offline after that. Photos album access is requested only when
+   you create a review album. Your photos stay on this Mac.
+
+Photo Tidy never deletes or edits photos. It creates a "Tidy Review" album;
+you review it in Photos and decide what to delete there.

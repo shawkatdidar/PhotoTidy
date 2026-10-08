@@ -1,0 +1,17 @@
+PHOTO TIDY - how to open it the first time
+
+1. Drag "Photo Tidy" into the Applications folder.
+
+2. This build is not signed or notarized by Apple, so macOS may block the first
+   launch. Try opening it once, then go to System Settings > Privacy & Security,
+   scroll down, and click "Open Anyway". Only open software you trust.
+
+3. The welcome screen shows a three-step guide and an access check. If library access is
+   blocked, enable Photo Tidy in System Settings > Privacy & Security > Full Disk Access.
+   Download Model in the app gets EmbeddingGemma 2 (485 MB, once). You can scan offline
+   after that. Explore searches photos by phrase or visual match; Collections groups
+   scenes and events locally. Photos album access is only requested when you create a review album.
+   Your photos never leave this Mac.
+
+Photo Tidy never deletes or edits photos. It creates a "Tidy Review" album; you review it in
+Photos and delete there (Recently Deleted keeps items for 30 days).

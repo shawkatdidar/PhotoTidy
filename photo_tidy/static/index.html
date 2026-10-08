@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Tidy</title>
+<style>
+:root { color-scheme:light; --canvas:#fff; --sidebar:#f4f4f6; --surface:#f6f6f8; --surface-hover:#ececf0; --ink:#1d1d1f; --muted:#77777e; --line:#e8e8ed; --blue:#007aff; --red:#e44955; --green:#238a57; --shadow:0 16px 55px rgba(23,26,36,.12); }
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:var(--canvas); color:var(--ink); font:14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; -webkit-font-smoothing:antialiased; }
+button, select, input { font:inherit; }
+button { cursor:pointer; }
+button:disabled { cursor:default; opacity:.5; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline:3px solid color-mix(in srgb, var(--blue) 55%, transparent); outline-offset:2px; }
+.hidden { display:none !important; }
+.mute { color:var(--muted); }
+.app { height:100vh; min-height:520px; display:grid; grid-template-columns:234px minmax(0,1fr); overflow:hidden; }
+.sidebar { background:var(--sidebar); border-right:1px solid var(--line); padding:58px 12px 18px; display:flex; flex-direction:column; min-width:0; }
+.brand { display:flex; align-items:center; gap:10px; padding:2px 12px 28px; font-size:15px; font-weight:700; letter-spacing:-.25px; }
+.brand-mark { width:29px; height:29px; display:grid; place-items:center; color:white; background:linear-gradient(145deg,#7fc5ff,#3f76ed 68%,#5a66d7); border-radius:8px; box-shadow:0 2px 6px rgba(0,90,190,.2); }
+.brand-mark svg { width:18px; height:18px; }
+.side-label { padding:0 12px 7px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.tabs { display:grid; gap:3px; }
+.tab { width:100%; display:flex; align-items:center; gap:11px; border:0; text-align:left; color:var(--ink); background:transparent; border-radius:8px; padding:8px 11px; font-weight:550; }
+.tab:hover { background:var(--surface-hover); }
+.tab.on { background:color-mix(in srgb,var(--blue) 14%,transparent); color:var(--blue); }
+.tab svg { width:18px; height:18px; flex:none; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.tab .count { margin-left:auto; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.tab.on .count { color:var(--blue); }
+.side-spacer { flex:1; }
+.sidebar-note { margin:0 10px; padding:14px 4px 0; border-top:1px solid var(--line); display:flex; align-items:flex-start; gap:8px; color:var(--muted); font-size:11px; line-height:1.35; }
+.sidebar-note svg { width:15px; height:15px; flex:none; color:var(--green); }
+.workspace { min-width:0; overflow-y:auto; overflow-x:hidden; background:var(--canvas); }
+.window-toolbar { height:58px; display:flex; align-items:center; gap:10px; padding:0 34px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:color-mix(in srgb,var(--canvas) 84%,transparent); -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.window-toolbar .crumb { font-size:13px; color:var(--muted); font-weight:550; }
+.window-toolbar .sp { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:99px; padding:5px 9px; font-size:11px; font-weight:600; white-space:nowrap; }
+.pill .dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+.pill.warn { color:var(--red); }
+.pill.warn .dot { background:var(--red); }
+main { max-width:1200px; padding:44px 46px 105px; margin:0 auto; }
+.eyebrow { color:var(--blue); font-weight:700; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; margin:0 0 8px; }
+h1 { font-size:clamp(32px,3.5vw,46px); letter-spacing:-1.8px; line-height:1.08; font-weight:700; margin:0 0 11px; }
+.intro { max-width:600px; color:var(--muted); font-size:15px; margin:0 0 30px; }
+.scan-panel { min-height:134px; display:flex; align-items:center; gap:20px; padding:24px 26px; background:linear-gradient(115deg,color-mix(in srgb,var(--blue) 9%,var(--surface)),var(--surface) 72%); border:1px solid var(--line); border-radius:17px; }
+.scan-icon { width:54px; height:54px; flex:none; display:grid; place-items:center; border-radius:16px; background:color-mix(in srgb,var(--blue) 15%,var(--canvas)); color:var(--blue); }
+.scan-icon svg { width:27px; height:27px; stroke:currentColor; stroke-width:1.7; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.scan-copy { flex:1 1 240px; min-width:180px; }
+.scan-copy strong { display:block; font-size:16px; letter-spacing:-.2px; margin-bottom:4px; }
+.scan-copy p { color:var(--muted); margin:0; font-size:12px; max-width:620px; }
+.primary { background:var(--blue); color:#fff; border:1px solid transparent; border-radius:9px; padding:9px 15px; font-weight:650; box-shadow:0 1px 2px rgba(0,0,0,.1); white-space:nowrap; }
+.primary:hover:not(:disabled) { filter:brightness(.94); }
+.ghost { color:var(--blue); background:transparent; border:0; border-radius:8px; padding:7px 9px; font-weight:600; }
+.ghost:hover { background:color-mix(in srgb,var(--blue) 9%,transparent); }
+.bar { height:4px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:15px; }
+.bar > i { display:block; height:100%; width:0; background:var(--blue); border-radius:99px; transition:width .3s; }
+.privacy { display:flex; align-items:flex-start; gap:12px; padding:19px 2px 0; color:var(--muted); font-size:12px; }
+.privacy svg { width:18px; height:18px; flex:none; color:var(--green); stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.privacy b { color:var(--ink); }
+.results { margin-top:46px; }
+body.has-results main { padding-top:28px; }
+body.has-results .app .eyebrow, body.has-results .app h1, body.has-results .app .intro, body.has-results .app .privacy { display:none; }
+body.has-results .scan-panel { min-height:0; padding:12px 16px; border-radius:12px; }
+body.has-results .scan-icon { width:38px; height:38px; border-radius:10px; }
+body.has-results .scan-icon svg { width:21px; height:21px; }
+body.has-results .scan-copy strong { font-size:13px; margin-bottom:1px; }
+body.has-results .scan-copy p { font-size:11px; }
+body.has-results .results { margin-top:32px; }
+.section-heading { display:flex; align-items:end; gap:18px; margin-bottom:19px; }
+.section-heading h2 { font-size:26px; line-height:1.15; letter-spacing:-.65px; margin:0 0 4px; }
+.section-heading p { margin:0; color:var(--muted); font-size:13px; }
+.section-stat { margin-left:auto; color:var(--muted); white-space:nowrap; font-size:12px; }
+.toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:11px 0 16px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+.toolbar .grow { flex:1; }
+.toolbar label { white-space:nowrap; }
+.search-form { display:flex; align-items:center; gap:8px; width:100%; }
+.search-form input { flex:1; min-width:0; height:38px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); }
+.search-form input::placeholder { color:var(--muted); }
+.search-note { width:100%; margin:0; font-size:11px; color:var(--muted); }
+.explore-heading { margin:0 0 14px; color:var(--muted); font-size:12px; }
+select { appearance:none; padding:6px 26px 6px 9px; border-radius:7px; border:1px solid var(--line); background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Cpath d='m1 2 4 4 4-4' fill='none' stroke='%2377777e' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 9px center; color:var(--ink); font-size:12px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(142px,1fr)); gap:8px; }
+.photo-tile { position:relative; min-width:0; }
+.group-card { padding:20px 0 24px; border-top:1px solid var(--line); }
+.group-card:first-child { border-top:0; padding-top:1px; }
+.ghead { display:flex; align-items:baseline; gap:8px; margin:0 0 12px; font-size:13px; }
+.ghead b { font-weight:650; }
+.ghead span { font-size:12px; }
+.ph { position:relative; aspect-ratio:1; overflow:hidden; padding:0; border:0; border-radius:8px; background:var(--surface); display:block; width:100%; text-align:left; }
+.ph img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s ease; }
+.ph:hover img { transform:scale(1.035); }
+.ph::after { content:""; position:absolute; inset:0; border:2px solid transparent; border-radius:8px; pointer-events:none; }
+.ph.sel::after { border-color:var(--blue); }
+.ph .mark { position:absolute; top:8px; left:8px; width:22px; height:22px; border:1.5px solid white; border-radius:50%; background:rgba(0,0,0,.33); color:#fff; display:grid; place-items:center; font-size:13px; font-weight:700; text-shadow:0 1px 2px #0006; }
+.ph.sel .mark { background:var(--blue); border-color:white; }
+.ph .tag { position:absolute; left:8px; bottom:8px; border-radius:5px; background:rgba(20,20,24,.68); color:white; font-size:10px; font-weight:700; letter-spacing:.2px; padding:3px 6px; }
+.ph .tag.keep { background:rgba(35,138,87,.9); }
+.ph .meta { position:absolute; right:8px; top:8px; padding:3px 6px; border-radius:5px; background:rgba(20,20,24,.55); color:white; font-size:10px; }
+.find-match { position:absolute; right:7px; bottom:7px; z-index:2; display:grid; place-items:center; width:29px; height:29px; border:1px solid rgba(255,255,255,.75); border-radius:7px; color:white; background:rgba(20,20,24,.67); backdrop-filter:blur(8px); }
+.find-match:hover { background:var(--blue); }
+.find-match svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.collection-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; }
+.collection-card { padding:0; overflow:hidden; border:1px solid var(--line); border-radius:13px; background:var(--surface); text-align:left; color:var(--ink); }
+.collection-card:hover { border-color:color-mix(in srgb,var(--blue) 40%,var(--line)); }
+.collection-covers { height:125px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:2px; overflow:hidden; background:var(--line); }
+.collection-covers img { width:100%; height:100%; object-fit:cover; }
+.collection-copy { display:block; padding:11px 13px 13px; }
+.collection-copy strong { display:block; font-size:13px; }
+.collection-copy span { display:block; margin-top:2px; color:var(--muted); font-size:11px; }
+.empty { text-align:center; padding:70px 20px; color:var(--muted); background:var(--surface); border-radius:14px; }
+.empty strong { display:block; color:var(--ink); font-size:16px; margin-bottom:4px; }
+.sticky { position:fixed; left:234px; right:0; bottom:0; z-index:6; display:flex; align-items:center; gap:15px; padding:13px 36px; border-top:1px solid var(--line); background:color-mix(in srgb,var(--canvas) 89%,transparent); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); box-shadow:0 -8px 25px rgba(0,0,0,.04); }
+.sticky .sp { flex:1; }
+.sticky b { font-size:13px; }
+.sticky .mute { font-size:12px; }
+.modal { position:fixed; inset:0; z-index:10; display:none; align-items:center; justify-content:center; background:rgba(10,10,15,.38); padding:24px; -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px); }
+.modal.on { display:flex; }
+.modal .box { width:min(100%,440px); padding:26px; border:1px solid var(--line); border-radius:17px; background:var(--canvas); box-shadow:var(--shadow); }
+.modal h2 { font-size:20px; letter-spacing:-.4px; line-height:1.2; margin:0 0 13px; }
+.modal ul { padding-left:20px; margin:6px 0 22px; color:var(--muted); }
+.modal li { margin-bottom:7px; }
+.modal p { margin:5px 0 16px; }
+.row { display:flex; justify-content:flex-end; gap:8px; }
+.side-help { display:flex; align-items:center; gap:9px; width:calc(100% - 20px); margin:0 10px 14px; padding:9px 5px; border:0; border-radius:8px; color:var(--muted); background:transparent; text-align:left; font-size:12px; font-weight:550; }
+.side-help:hover { color:var(--ink); background:var(--surface-hover); }
+.side-help svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.welcome { position:fixed; inset:0; z-index:20; overflow:auto; background:radial-gradient(ellipse 55% 38% at 50% 0%,#edf5ff,transparent 95%),var(--canvas); }
+.welcome-inner { max-width:1120px; min-height:100%; margin:0 auto; padding:28px 52px 25px; }
+.welcome-top { display:flex; justify-content:space-between; align-items:center; }
+.welcome-brand { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
+.welcome-brand .brand-mark { width:32px; height:32px; border-radius:9px; }
+.welcome-top-note { color:var(--green); font-size:12px; font-weight:650; }
+.welcome-top-note::before { content:"●"; font-size:9px; margin-right:7px; }
+.welcome-hero { padding:23px 0 20px; text-align:center; }
+.welcome h1 { max-width:none; margin:0 0 7px; font-size:clamp(37px,4vw,47px); line-height:1.04; letter-spacing:-2.1px; }
+.welcome-lead { margin:0 auto 12px; color:var(--muted); font-size:15px; }
+.welcome-lead strong { color:var(--ink); font-weight:600; }
+.welcome-action { display:flex; justify-content:center; align-items:center; gap:15px; }
+.welcome-action .primary { padding:10px 18px; }
+.welcome-action span { color:var(--muted); font-size:11px; }
+.flow-heading { margin:0 0 9px; color:var(--muted); font-size:10px; font-weight:750; letter-spacing:1.2px; text-transform:uppercase; }
+.flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.flow-card { position:relative; min-width:0; padding:10px 14px 12px; border:1px solid var(--line); border-radius:15px; background:#fff; box-shadow:0 8px 24px rgba(34,55,90,.045); }
+.flow-card:not(:last-child)::after { content:"→"; position:absolute; top:44%; right:-18px; z-index:1; width:20px; height:20px; border-radius:50%; display:grid; place-items:center; color:var(--blue); background:var(--canvas); font-weight:750; }
+.flow-card svg { width:100%; height:68px; display:block; margin-bottom:5px; }
+.flow-card h2 { margin:0 0 2px; font-size:15px; letter-spacing:-.2px; }
+.flow-card p { margin:0; color:var(--muted); font-size:11px; }
+.access-card { margin-top:16px; padding:12px 17px 6px; border:1px solid var(--line); border-radius:15px; background:var(--surface); }
+.access-head { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.access-head h2 { margin:0; font-size:16px; letter-spacing:-.3px; }
+.access-head .sp { flex:1; }
+.access-head .ghost { font-size:12px; }
+.access-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid var(--line); }
+.access-row { display:grid; grid-template-columns:30px minmax(0,1fr) auto; align-items:center; gap:9px; padding:11px 10px 8px 0; }
+.access-row + .access-row { border-left:1px solid var(--line); padding-left:14px; }
+.access-icon { width:30px; height:30px; border-radius:8px; display:grid; place-items:center; color:var(--blue); background:var(--canvas); }
+.access-icon svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.access-row strong { display:block; font-size:12px; }
+.access-row p { margin:1px 0 0; color:var(--muted); font-size:11px; }
+.access-status { padding:4px 8px; border-radius:99px; color:var(--muted); background:#e9e9ed; white-space:nowrap; font-size:10px; font-weight:700; }
+.access-status.ready { color:#157347; background:#e0f4e9; }
+.access-status.blocked { color:#ad4c2a; background:#fff0e6; }
+.access-status.limited { color:#8d6400; background:#fff3d5; }
+.spec-card { display:flex; flex-wrap:wrap; align-items:center; gap:7px 13px; margin-top:10px; padding:11px 16px; border:1px solid var(--line); border-radius:13px; background:var(--surface); }
+.spec-card strong { font-size:12px; }
+.spec-card .spec-baseline { flex:1; color:var(--muted); font-size:11px; }
+.spec-card .ghost { font-size:12px; }
+.spec-results { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; width:100%; padding-top:7px; border-top:1px solid var(--line); }
+.spec-result { display:flex; flex-direction:column; gap:2px; min-width:0; padding:7px 9px; border-radius:8px; background:var(--canvas); }
+.spec-result span { color:var(--muted); font-size:10px; }
+.spec-result b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:650; }
+.spec-result.good b { color:#157347; }
+.spec-result.warn b { color:#9b6300; }
+.spec-result.bad b { color:#ad4c2a; }
+.spec-summary { width:100%; margin:0; color:var(--muted); font-size:11px; }
+.welcome-foot { display:flex; justify-content:center; align-items:center; gap:7px; margin:13px 0 0; color:var(--muted); font-size:11px; text-align:center; }
+.welcome-foot strong { color:var(--ink); }
+.wifi-line { margin:5px 0 0; color:var(--muted); font-size:11px; text-align:center; }
+@media (max-width:850px) { .app { grid-template-columns:186px minmax(0,1fr); } .sticky { left:186px; flex-wrap:wrap; justify-content:flex-end; gap:7px; padding:10px 20px; } .sticky > div:first-child { width:100%; } .sticky .sp { display:none; } main { padding:34px 26px 130px; } .window-toolbar { padding:0 26px; } .scan-panel { flex-wrap:wrap; } .scan-panel .primary { margin-left:74px; } .section-heading { align-items:start; flex-direction:column; gap:3px; } .section-stat { margin-left:0; } }
+@media (max-width:850px) { .welcome-inner { padding:28px 32px 25px; } .welcome-hero { padding:20px 0 18px; } .flow-card svg { height:62px; } .access-grid { grid-template-columns:1fr; } .access-row + .access-row { border-left:0; border-top:1px solid var(--line); padding-left:0; } }
+@media (max-width:680px) { .welcome-inner { padding:32px 25px; } .welcome h1 { font-size:37px; } .welcome-action { flex-direction:column; gap:8px; } .flow { grid-template-columns:1fr; } .flow-card { display:grid; grid-template-columns:80px 1fr; column-gap:14px; } .flow-card svg { grid-row:span 2; height:64px; margin:0; } .flow-card:not(:last-child)::after { display:none; } .flow-card h2 { align-self:end; } .access-card { padding:14px 15px 4px; } .access-row { grid-template-columns:30px 1fr; } .access-status { grid-column:2; justify-self:start; } .welcome-foot { flex-wrap:wrap; } }
+@media (max-width:680px) { .spec-results { grid-template-columns:repeat(2,minmax(0,1fr)); } .spec-card .spec-baseline { flex-basis:100%; order:2; } .spec-card .ghost { margin-left:auto; } }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
+  <div class="welcome-inner">
+    <div class="welcome-top">
+      <div class="welcome-brand"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="15" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 13l2.8-3 2.5 2.5 2-2 3.7 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 21h11a3 3 0 0 0 3-3V8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>Photo Tidy</div>
+      <span class="welcome-top-note">Everything stays local</span>
+    </div>
+    <div class="welcome-hero">
+      <p class="eyebrow">Welcome to Photo Tidy</p>
+      <h1 id="welcomeTitle">Clear the clutter.<br>Keep the memories.</h1>
+      <p class="welcome-lead"><strong>Your photos never leave this Mac.</strong> You choose what goes.</p>
+      <div class="welcome-action"><button type="button" class="primary" id="welcomeBtn">Open Library →</button><span>No account. No automatic deletion.</span></div>
+    </div>
+    <p class="flow-heading">How it works</p>
+    <div class="flow" aria-label="Scan, review, then make a review album in Photos">
+      <div class="flow-card">
+        <svg viewBox="0 0 180 90" aria-hidden="true"><rect x="34" y="21" width="70" height="54" rx="9" fill="#dceaf5" stroke="#c7daea"/><path d="M37 70 63 42 82 62 96 49 104 58v8a9 9 0 0 1-9 9H43a9 9 0 0 1-6-5Z" fill="#8fb3c9"/><circle cx="82" cy="38" r="7" fill="#fff0c8"/><rect x="77" y="14" width="70" height="54" rx="9" fill="#e8f2e8" stroke="#c6dfce"/><path d="m80 63 25-27 19 21 14-13 9 10v5a9 9 0 0 1-9 9H86a9 9 0 0 1-6-5Z" fill="#81b19b"/><circle cx="125" cy="31" r="7" fill="#fff0c8"/></svg>
+        <h2>1 · Scan</h2><p>Find similar shots, blur, and screenshots.</p>
+      </div>
+      <div class="flow-card">
+        <svg viewBox="0 0 180 90" aria-hidden="true"><rect x="27" y="18" width="54" height="54" rx="9" fill="#e6edf4"/><path d="m29 67 19-24 17 19 16-16v17a9 9 0 0 1-9 9H36a9 9 0 0 1-7-5Z" fill="#8ba5bc"/><rect x="99" y="18" width="54" height="54" rx="9" fill="#e7f1e8" stroke="#007aff" stroke-width="2"/><path d="m101 67 19-24 17 19 16-16v17a9 9 0 0 1-9 9h-36a9 9 0 0 1-7-5Z" fill="#7eae91"/><circle cx="145" cy="27" r="11" fill="#007aff" stroke="white" stroke-width="2"/><path d="m140 27 3 3 6-6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h2>2 · Review</h2><p>Pick the photos you want to revisit.</p>
+      </div>
+      <div class="flow-card">
+        <svg viewBox="0 0 180 90" aria-hidden="true"><path d="M32 31a8 8 0 0 1 8-8h32l10 11h58a8 8 0 0 1 8 8v30a8 8 0 0 1-8 8H40a8 8 0 0 1-8-8V31Z" fill="#dceaff" stroke="#9cc6fb"/><rect x="60" y="43" width="27" height="27" rx="4" fill="#b8d8e9"/><rect x="91" y="43" width="27" height="27" rx="4" fill="#c8dfcb"/><path d="m63 66 9-11 9 11m13 0 9-11 10 11" fill="none" stroke="#6c9ba6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h2>3 · Photos album</h2><p>Decide what to delete in Photos.</p>
+      </div>
+    </div>
+    <section class="access-card" aria-label="Access setup">
+      <div class="access-head"><h2>Access setup</h2><span class="sp"></span><button type="button" class="ghost" id="checkAccessBtn">Check access</button></div>
+      <div class="access-grid">
+        <div class="access-row"><span class="access-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="1"/><path d="m5 17 5-5 3 3 3-3 3 3"/></svg></span><div><strong>Photo library files</strong><p id="libraryHint">Needed to scan. macOS may ask for access.</p></div><span class="access-status" id="libraryStatus" aria-live="polite">Not checked</span></div>
+        <div class="access-row"><span class="access-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 5V3m8 2V3M4 10h16m-11 5h6"/></svg></span><div><strong>Photos album access</strong><p id="photosHint">Only needed when you create a review album.</p></div><span class="access-status" id="photosStatus" aria-live="polite">Not asked yet</span></div>
+      </div>
+    </section>
+    <section class="spec-card" aria-label="Mac compatibility">
+      <strong>This Mac</strong><span class="spec-baseline">Requires Apple Silicon · macOS 13+ · 485 MB model</span><button type="button" class="ghost" id="checkSpecsBtn">Check this Mac</button>
+      <div class="spec-results hidden" id="specResults" aria-live="polite">
+        <div class="spec-result" id="specArch"><span>Chip · required</span><b>—</b></div>
+        <div class="spec-result" id="specOS"><span>macOS · required</span><b>—</b></div>
+        <div class="spec-result" id="specRAM"><span>Memory · 8 GB suggested</span><b>—</b></div>
+        <div class="spec-result" id="specDisk"><span>Free space · 2 GB suggested</span><b>—</b></div>
+      </div>
+      <p class="spec-summary hidden" id="specSummary"></p>
+    </section>
+    <p class="welcome-foot"><strong>EmbeddingGemma 2</strong><span>· Runs on this Mac · One-time 485 MB model download</span></p>
+    <p class="wifi-line">Then turn off Wi‑Fi if you like. We won’t take it personally.</p>
+  </div>
+</section>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="15" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 13l2.8-3 2.5 2.5 2-2 3.7 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 21h11a3 3 0 0 0 3-3V8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>Photo Tidy</div>
+    <div class="side-label">Library</div>
+    <nav class="tabs" id="tabs" aria-label="Photo categories">
+      <button class="tab on" type="button" disabled><span>Similar Photos</span></button>
+      <button class="tab" type="button" disabled><span>Screenshots</span></button>
+      <button class="tab" type="button" disabled><span>Blurry Photos</span></button>
+      <button class="tab" type="button" disabled><span>Explore</span></button>
+      <button class="tab" type="button" disabled><span>Collections</span></button>
+    </nav>
+    <div class="side-spacer"></div>
+    <button type="button" class="side-help" id="howBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>How it works</button>
+    <div class="sidebar-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Your library stays on this Mac. Photo Tidy never deletes photos.</span></div>
+  </aside>
+  <div class="workspace" id="workspace">
+    <header class="window-toolbar">
+      <span class="crumb">Library</span><span class="sp"></span>
+      <span class="pill"><span class="dot"></span>Private on this Mac</span>
+      <span id="dry" class="pill warn hidden"><span class="dot"></span>Dry run</span>
+    </header>
+    <main>
+      <p class="eyebrow">A clearer library</p>
+      <h1>Make room for what matters.</h1>
+      <p class="intro">Find similar shots, screenshots, and blur—right on this Mac.</p>
+
+      <div class="scan-panel" id="scanCard">
+        <div class="scan-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg></div>
+        <div class="scan-copy"><strong>Explore your photo library</strong><p id="scanMsg">Photos are analyzed on this Mac. Scanning again only processes new photos.</p><div class="bar hidden" id="bar"><i></i></div></div>
+        <button id="scanBtn" class="primary">Scan Library</button>
+      </div>
+
+      <div class="privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><div><b>You stay in control.</b> Photo Tidy never deletes or edits photos. It only makes a review album when you ask.</div></div>
+
+      <section id="results" class="results hidden" aria-label="Scan results">
+        <div class="section-heading"><div><h2 id="categoryTitle">Similar Photos</h2><p id="categoryDescription"></p></div><span id="categoryStat" class="section-stat"></span></div>
+        <div id="toolbar" class="toolbar"></div>
+        <div id="view"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="sticky hidden" id="sticky">
+  <div><b id="selCount">0 photos</b> <span class="mute" id="selSize"></span></div>
+  <div class="sp"></div>
+  <button class="ghost" id="clearBtn">Clear selection</button>
+  <button class="primary" id="sendBtn">Create Review Album…</button>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="box">
+  <h2 id="mTitle"></h2>
+  <div id="mBody"></div>
+  <div class="row" id="mBtns"></div>
+</div></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('t');
+const H = {'X-Tidy-Token': TOKEN};
+const $ = id => document.getElementById(id);
+const nativeBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.tidy;
+let R = null, tab = 'similar', sel = new Set(), sizes = {}, sim = 0.95, initDone = false;
+let explore = {mode:'intro', query:'', draft:'', photos:[], source:null, error:''};
+let activeCollection = null, exploreRequest = 0;
+
+function accessState(kind, state) {
+  const status = $(kind + 'Status'), hint = $(kind + 'Hint');
+  const values = kind === 'library' ? {
+    checking:['Checking…','Checking library read access.'],
+    ready:['Ready','Ready to scan your library.'],
+    blocked:['Needs access','Enable Full Disk Access for Photo Tidy in System Settings, then reopen.'],
+    unknown:['Could not verify','Try Scan Library to check access.']
+  } : {
+    ready:['Ready','Ready to create a review album.'],
+    limited:['Limited','Some selected photos may be unavailable.'],
+    blocked:['Needs access','Allow Photo Tidy under System Settings → Privacy & Security → Photos.'],
+    notAsked:['Not asked yet','macOS asks when you create a review album.'],
+    unknown:['Unavailable','Checked in the Mac app.']
+  };
+  const [label, detail] = values[state] || values.unknown;
+  status.textContent = label;
+  status.className = 'access-status ' + (state === 'ready' || state === 'blocked' || state === 'limited' ? state : '');
+  hint.textContent = detail;
+}
+window.__permissions = info => accessState('photos', info.photos);
+function refreshPhotosStatus() {
+  if (nativeBridge) nativeBridge.postMessage({action:'getPermissions'});
+  else accessState('photos', 'unknown');
+}
+async function checkAccess() {
+  $('checkAccessBtn').disabled = true;
+  accessState('library', 'checking');
+  refreshPhotosStatus();
+  try {
+    const result = await api('/api/access');
+    accessState('library', result.library.state);
+  } catch (_) {
+    accessState('library', 'unknown');
+  }
+  $('checkAccessBtn').disabled = false;
+}
+function showWelcome() {
+  $('welcome').classList.remove('hidden');
+  document.querySelector('.app').inert = true;
+  $('sticky').inert = true;
+  $('welcome').scrollTop = 0;
+  refreshPhotosStatus();
+}
+function enterLibrary(persist = true) {
+  $('welcome').classList.add('hidden');
+  document.querySelector('.app').inert = false;
+  $('sticky').inert = false;
+  if (!persist) return;
+  if (nativeBridge) nativeBridge.postMessage({action:'completeOnboarding'});
+  else try { localStorage.setItem('photoTidyOnboarded', '1'); } catch (_) {}
+}
+let completedOnboarding = new URLSearchParams(location.search).get('onboarded') === '1';
+if (!nativeBridge) try { completedOnboarding = localStorage.getItem('photoTidyOnboarded') === '1'; } catch (_) {}
+if (completedOnboarding) enterLibrary(false);
+else showWelcome();
+$('welcomeBtn').onclick = () => enterLibrary();
+$('howBtn').onclick = showWelcome;
+$('checkAccessBtn').onclick = checkAccess;
+$('checkSpecsBtn').onclick = async () => {
+  const button = $('checkSpecsBtn');
+  button.disabled = true;
+  button.textContent = 'Checking…';
+  $('specResults').classList.remove('hidden');
+  $('specSummary').classList.remove('hidden');
+  try {
+    const s = await api('/api/specs');
+    const item = (id, value, state) => {
+      const el = $(id);
+      el.className = 'spec-result ' + state;
+      el.querySelector('b').textContent = value;
+    };
+    item('specArch', s.architecture === 'arm64' ? 'Apple Silicon ✓' : (s.architecture || 'Unknown'), s.architecture === 'arm64' ? 'good' : 'bad');
+    const osReady = Number((s.macos || '').split('.')[0]) >= 13;
+    item('specOS', s.macos ? 'macOS ' + s.macos : 'Unknown', osReady ? 'good' : 'bad');
+    item('specRAM', s.memory_bytes == null ? 'Unavailable' : Math.round(s.memory_bytes / 1073741824) + ' GB', s.memory_bytes == null ? '' : s.memory_bytes >= 8 * 1073741824 ? 'good' : 'warn');
+    item('specDisk', s.free_bytes == null ? 'Unavailable' : gb(s.free_bytes), s.free_bytes == null ? '' : s.free_bytes >= 2e9 ? 'good' : 'warn');
+    $('specSummary').textContent = !s.required_ok ? 'This build needs Apple Silicon and macOS 13 or newer.' :
+      (s.memory_bytes != null && s.memory_bytes < 8 * 1073741824) || (s.free_bytes != null && s.free_bytes < 2e9) ?
+      'Compatible. More memory or free space may help with large libraries.' :
+      'Compatible. Memory and storage figures are guidance, not hard limits.';
+  } catch (_) {
+    $('specResults').classList.add('hidden');
+    $('specSummary').textContent = 'Could not check this Mac. Try again.';
+  }
+  button.textContent = 'Check again';
+  button.disabled = false;
+};
+
+const gb = b => b >= 1e9 ? (b/1e9).toFixed(1)+' GB' : b >= 1e7 ? (b/1e6).toFixed(0)+' MB' : b >= 1e6 ? (b/1e6).toFixed(1)+' MB' : (b/1e3).toFixed(0)+' KB';
+const day = ts => new Date(ts*1000).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+const api = (p, o) => fetch(p, {headers:H, ...o}).then(r => r.json());
+const img = u => `/thumb/${u}.jpg?t=${encodeURIComponent(TOKEN)}`;
+
+let ST = {model: {phase: 'ready'}};
+const mb = b => (b/1e6).toFixed(0) + ' MB';
+async function poll() {
+  const s = ST = await api('/api/status');
+  $('dry').classList.toggle('hidden', !s.dry_run);
+  const m = s.model, dl = m.phase === 'downloading', needModel = m.phase !== 'ready';
+  const busy = s.phase === 'reading' || s.phase === 'embedding' || dl;
+  $('scanBtn').disabled = busy;
+  $('scanBtn').textContent = needModel ? 'Download Model' : 'Scan Library';
+  $('bar').classList.toggle('hidden', !busy);
+  if (dl) {
+    $('scanMsg').textContent = `Downloading the AI model once… ${mb(m.done)} / ${mb(m.total)}`;
+    $('bar').firstElementChild.style.width = (100*m.done/m.total) + '%';
+  } else if (busy) {
+    $('scanMsg').textContent = s.message + (s.total ? `  ${s.done} / ${s.total}` : '');
+    $('bar').firstElementChild.style.width = (s.total ? 100*s.done/s.total : 5) + '%';
+  } else if (needModel) {
+    $('scanMsg').textContent = (m.error ? 'Download failed (' + m.error + '). ' : '') +
+      'One-time 485 MB model download from Hugging Face. Your photos stay on this Mac.';
+  } else if (s.phase === 'error') {
+    $('scanMsg').textContent = 'Scan failed: ' + s.error;
+    if (/access|permission|blocking/i.test(s.error || '')) accessState('library', 'blocked');
+  } else if (s.phase === 'done') {
+    $('scanMsg').textContent = 'Scan complete. Re-run any time; it only processes new photos.';
+    accessState('library', 'ready');
+  }
+  if (busy) setTimeout(poll, 800);
+  else if (!needModel) loadResults();
+}
+
+async function loadResults() {
+  const r = await api('/api/results?sim=' + sim);
+  if (r.empty) return;
+  R = r; sizes = {};
+  r.similar.forEach(g => g.photos.forEach(p => sizes[p.uuid] = p.size));
+  r.screenshots.concat(r.blurry).forEach(p => sizes[p.uuid] = p.size);
+  (r.collections || []).forEach(c => c.scenes.forEach(scene => scene.photos.forEach(p => sizes[p.uuid] = p.size)));
+  if (!initDone) { initDone = true; r.similar.forEach(g => g.photos.forEach(p => p.suggest_remove && sel.add(p.uuid))); }
+  document.body.classList.add('has-results');
+  $('results').classList.remove('hidden');
+  render();
+}
+
+function render() {
+  const s = R.stats;
+  const icons = {
+    similar: '<rect x="4" y="5" width="13" height="13" rx="2"/><path d="M8 21h10a3 3 0 0 0 3-3V9"/><path d="m7 14 3-3 2 2 2-2 3 3"/>',
+    screenshots: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 4v4H4m16 8h-4v4M9 15l2-2 2 2 2-3 2 3"/>',
+    blurry: '<circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8M2.8 8.5a12 12 0 0 0 0 7M21.2 8.5a12 12 0 0 1 0 7"/>',
+    explore: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
+    collections: '<rect x="3" y="4" width="8" height="8" rx="2"/><rect x="13" y="4" width="8" height="8" rx="2"/><rect x="3" y="14" width="8" height="8" rx="2"/><rect x="13" y="14" width="8" height="8" rx="2"/>'
+  };
+  const defs = [['similar','Similar Photos', s.similar_removable, `Near-identical shots, grouped for an easier review.`, `${s.similar_groups} groups · about ${gb(s.similar_bytes)}`],
+                ['screenshots','Screenshots', s.screenshots, 'Your screenshots, newest first.', `About ${gb(s.screenshot_bytes)}`],
+                ['blurry','Blurry Photos', s.blurry, 'Photos with very low sharpness.', `About ${gb(s.blurry_bytes)}`],
+                ['explore','Explore', '', 'Search with words or find photos that look alike.', explore.mode === 'intro' ? `${s.photos} indexed photos` : `${explore.photos.length} closest matches`],
+                ['collections','Collections', s.collections || 0, 'Scenes and events grouped on this Mac.', 'Virtual collections · no Photos albums created']];
+  $('tabs').innerHTML = defs.map(d => `<button type="button" class="tab ${tab===d[0]?'on':''}" data-t="${d[0]}" aria-current="${tab===d[0]?'page':'false'}"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[d[0]]}</svg><span>${d[1].replace(' Photos','')}</span><span class="count">${d[2]}</span></button>`).join('');
+  $('tabs').querySelectorAll('.tab').forEach(e => e.onclick = () => { tab = e.dataset.t; activeCollection = null; render(); $('workspace').scrollTo({top:$('results').offsetTop - 58, behavior:'smooth'}); });
+  const active = defs.find(d => d[0] === tab);
+  $('categoryTitle').textContent = tab === 'collections' && activeCollection ? collectionDate(activeCollection.start) : active[1];
+  $('categoryDescription').textContent = tab === 'collections' && activeCollection ? `${collectionTime(activeCollection.start)}–${collectionTime(activeCollection.end)} · grouped by visual scene` : active[3];
+  $('categoryStat').textContent = tab === 'collections' && activeCollection ? `${activeCollection.count} photos` : active[4];
+  const tb = $('toolbar');
+  const v = $('view');
+  if (tab === 'similar') {
+    tb.innerHTML = `<span>Suggested photos are nearly identical. Click to change selection.</span>
+      <span class="grow"></span><label>Similarity <select id="simSel">
+      <option value="0.95">Strict (safest)</option><option value="0.92">Balanced</option><option value="0.89">Loose</option></select></label>`;
+    $('simSel').value = String(sim);
+    $('simSel').onchange = e => { sim = parseFloat(e.target.value); initDone = false; sel.clear(); loadResults(); };
+  } else if (tab === 'screenshots' || tab === 'blurry') {
+    const list = tab === 'screenshots' ? R.screenshots : R.blurry;
+    tb.innerHTML = `<span>${tab==='screenshots' ? 'Screenshots are never selected automatically.' : 'Check each photo before selecting it.'}</span>
+      <span class="grow"></span><button class="ghost" id="allBtn">Select All</button><button class="ghost" id="noneBtn">Select None</button>`;
+    $('allBtn').onclick = () => { list.forEach(p => sel.add(p.uuid)); render(); };
+    $('noneBtn').onclick = () => { list.forEach(p => sel.delete(p.uuid)); render(); };
+  } else if (tab === 'explore') {
+    renderExplore(tb, v);
+  } else {
+    renderCollections(tb, v);
+  }
+  if (tab === 'similar') {
+    v.innerHTML = R.similar.slice(0, 200).map(g => `<div class="group-card"><p class="ghead"><b>${g.photos.length} similar photos</b>
+      <span class="mute">${day(g.photos[0].ts)}</span></p><div class="grid">${g.photos.map(cell).join('')}</div></div>`).join('')
+      || '<div class="empty"><strong>Looking good.</strong>No similar photos found.</div>';
+  } else if (tab === 'screenshots' || tab === 'blurry') {
+    const list = tab === 'screenshots' ? R.screenshots : R.blurry;
+    v.innerHTML = list.length ? `<div class="grid">${list.slice(0, 600).map(cell).join('')}</div>` : '<div class="empty"><strong>All clear.</strong>Nothing found here.</div>';
+  }
+  v.querySelectorAll('.ph').forEach(e => e.onclick = () => {
+    const u = e.dataset.u; sel.has(u) ? sel.delete(u) : sel.add(u); render();
+  });
+  v.querySelectorAll('.find-match').forEach(e => e.onclick = () => findSimilar(e.dataset.u));
+  updateBar();
+}
+
+function renderExplore(tb, view) {
+  tb.innerHTML = `<form class="search-form" id="searchForm"><input id="searchInput" type="search" maxlength="160" aria-label="Search photos" placeholder="Try “sunset at the beach”" autocomplete="off"><button class="primary" type="submit">Search</button></form><p class="search-note">Search stays on this Mac. Results are closest visual matches.</p>`;
+  $('searchForm').querySelector('button').disabled = explore.mode === 'loading';
+  $('searchInput').value = explore.draft;
+  $('searchInput').oninput = e => explore.draft = e.target.value;
+  $('searchForm').onsubmit = e => { e.preventDefault(); runSearch($('searchInput').value); };
+  if (explore.mode === 'loading') {
+    view.innerHTML = '<div class="empty"><strong>Looking through your library…</strong>Matching photos on this Mac.</div>';
+  } else if (explore.mode === 'error') {
+    view.innerHTML = '<div class="empty"><strong>Search unavailable</strong><span id="exploreError"></span></div>';
+    $('exploreError').textContent = explore.error;
+  } else if (explore.mode === 'intro') {
+    view.innerHTML = '<div class="empty"><strong>Explore your photos.</strong>Describe a scene, or use the magnifier on any photo to find more like it.</div>';
+  } else if (!explore.photos.length) {
+    view.innerHTML = '<div class="empty"><strong>No matches yet.</strong>Scan your library or try another phrase.</div>';
+  } else {
+    view.innerHTML = `<p class="explore-heading" id="exploreHeading"></p><div class="grid">${explore.photos.map(cell).join('')}</div>`;
+    $('exploreHeading').textContent = explore.mode === 'nearby' ? 'Closest visual matches to the selected photo' : `Closest matches for “${explore.query}”`;
+  }
+}
+
+async function runSearch(query) {
+  query = query.trim();
+  explore.draft = query;
+  if (query.length < 2) {
+    explore.mode = 'error'; explore.error = 'Enter at least two characters.'; render(); return;
+  }
+  const request = ++exploreRequest;
+  explore.mode = 'loading'; explore.query = query; explore.photos = []; explore.error = '';
+  tab = 'explore'; render();
+  try {
+    const result = await api('/api/search', {method:'POST', body:JSON.stringify({query})});
+    if (request !== exploreRequest) return;
+    if (result.error) throw new Error(result.error);
+    explore.photos = result.photos;
+    result.photos.forEach(p => sizes[p.uuid] = p.size);
+    explore.mode = 'search';
+  } catch (error) {
+    if (request !== exploreRequest) return;
+    explore.mode = 'error'; explore.error = error.message || 'Try again.';
+  }
+  render();
+}
+
+async function findSimilar(uuid) {
+  const request = ++exploreRequest;
+  tab = 'explore';
+  explore.mode = 'loading'; explore.photos = []; explore.error = '';
+  render();
+  $('workspace').scrollTo({top:$('results').offsetTop - 58, behavior:'smooth'});
+  try {
+    const result = await api('/api/nearby?uuid=' + encodeURIComponent(uuid));
+    if (request !== exploreRequest) return;
+    if (result.error) throw new Error(result.error);
+    explore.photos = result.photos; explore.source = result.source;
+    result.photos.forEach(p => sizes[p.uuid] = p.size);
+    explore.mode = 'nearby';
+  } catch (error) {
+    if (request !== exploreRequest) return;
+    explore.mode = 'error'; explore.error = error.message || 'Try again.';
+  }
+  render();
+}
+
+const collectionDate = ts => new Date(ts * 1000).toLocaleDateString(undefined, {year:'numeric', month:'long', day:'numeric'});
+const collectionTime = ts => new Date(ts * 1000).toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+function renderCollections(tb, view) {
+  const collections = R.collections || [];
+  if (activeCollection) {
+    tb.innerHTML = '<button type="button" class="ghost" id="backCollections">← All collections</button><span>Grouped by time and visual similarity</span>';
+    $('backCollections').onclick = () => { activeCollection = null; render(); };
+    view.innerHTML = activeCollection.scenes.map((scene, index) => `<section class="group-card"><p class="ghead"><b>${scene.kind === 'other' ? 'More from this event' : 'Scene ' + (index + 1)}</b><span>${scene.photos.length} photos</span></p><div class="grid">${scene.photos.map(cell).join('')}</div></section>`).join('');
+  } else {
+    tb.innerHTML = '<span>Automatic groups from your scanned photos. Nothing is added to Photos.</span>';
+    view.innerHTML = collections.length ? `<div class="collection-grid">${collections.map(c => `<button type="button" class="collection-card" data-c="${c.id}"><span class="collection-covers">${c.covers.map(u => `<img loading="lazy" src="${img(u)}" alt="">`).join('')}</span><span class="collection-copy"><strong>${collectionDate(c.start)}</strong><span>${collectionTime(c.start)} · ${c.count} photos · ${c.scene_count ? c.scene_count + (c.scene_count === 1 ? ' scene' : ' scenes') : 'one event'}</span></span></button>`).join('')}</div>` : '<div class="empty"><strong>No collections yet.</strong>Scan at least a few photos from the same event.</div>';
+    view.querySelectorAll('.collection-card').forEach(button => button.onclick = () => {
+      activeCollection = collections.find(c => c.id === button.dataset.c);
+      render();
+      $('workspace').scrollTo({top:$('results').offsetTop - 58, behavior:'smooth'});
+    });
+  }
+}
+
+function cell(p) {
+  const on = sel.has(p.uuid);
+  const label = tab === 'similar' ? (on ? 'Review' : (p.favorite ? 'Keep ♥' : 'Keep')) : (on ? 'Selected' : '');
+  return `<div class="photo-tile"><button type="button" class="ph ${on?'sel':''}" data-u="${p.uuid}" aria-label="${on?'Deselect':'Select'} photo from ${day(p.ts)}"><img loading="lazy" src="${img(p.uuid)}" alt=""><span class="mark">${on?'✓':''}</span><span class="meta">${gb(p.size)}</span>${label ? `<span class="tag ${!on&&tab==='similar'?'keep':''}">${label}</span>` : ''}</button><button type="button" class="find-match" data-u="${p.uuid}" aria-label="Find photos like this one" title="Find similar photos"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></button></div>`;
+}
+
+function updateBar() {
+  const n = sel.size, bytes = [...sel].reduce((a, u) => a + (sizes[u] || 0), 0);
+  $('sticky').classList.toggle('hidden', n === 0);
+  $('selCount').textContent = n + (n === 1 ? ' photo' : ' photos') + ' for review';
+  $('selSize').textContent = '· about ' + gb(bytes) + ' if you delete them in Photos';
+}
+
+function createAlbum(uuids) {
+  if (nativeBridge && !ST.dry_run) {
+    return new Promise(res => { window.__album = res; nativeBridge.postMessage({action: 'createAlbum', uuids}); });
+  }
+  return api('/api/send', {method:'POST', body: JSON.stringify({uuids})});
+}
+
+function modal(title, body, buttons) {
+  $('mTitle').textContent = title; $('mBody').innerHTML = body;
+  $('mBtns').innerHTML = ''; buttons.forEach(([t, cls, fn]) => { const b = document.createElement('button'); b.textContent = t; b.className = cls || 'primary'; b.onclick = fn; $('mBtns').appendChild(b); });
+  $('modal').classList.add('on');
+  $('mBtns').lastElementChild.focus();
+}
+const closeModal = () => $('modal').classList.remove('on');
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('modal').classList.contains('on')) closeModal(); });
+
+$('clearBtn').onclick = () => { sel.clear(); render(); };
+$('scanBtn').onclick = async () => {
+  const result = await api(ST.model.phase !== 'ready' ? '/api/model/download' : '/api/scan', {method:'POST', body:'{}'});
+  if (result.error) { $('scanMsg').textContent = result.error; return; }
+  poll();
+};
+$('sendBtn').onclick = () => modal(`Create a review album with ${sel.size} photos?`,
+  `<ul><li>A <b>new album</b> is added to Photos. Nothing is deleted or changed.</li>
+   <li>You look through it in Photos and delete what you agree with.</li>
+   <li>Deleted photos stay in <i>Recently Deleted</i> for 30 days.</li></ul>`,
+  [['Cancel', 'ghost', closeModal], ['Create album', '', async () => {
+    closeModal();
+    const r = await createAlbum([...sel]);
+    refreshPhotosStatus();
+    if (r.error) return modal('Could not create the album', `<p>${r.error}</p><p class="mute">If macOS asked for access to Photos, choose Allow and try again.</p>`, [['OK', '', closeModal]]);
+    modal(r.dry_run ? 'Dry run complete' : 'Album created in Photos',
+      `<p><b>${r.album}</b> — ${r.added} of ${r.requested} photos.</p><p class="mute">${r.dry_run ? 'Dry-run mode: nothing was sent to Photos.' : 'Open Photos → Albums → this album. Review, then select photos and delete the ones you agree with.'}</p>`,
+      [['Done', '', closeModal]]);
+  }]]);
+
+poll();
+</script>
+</body>
+</html>

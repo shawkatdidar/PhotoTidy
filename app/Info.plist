@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Photo Tidy</string>
+  <key>CFBundleDisplayName</key><string>Photo Tidy</string>
+  <key>CFBundleIdentifier</key><string>com.phototidy.app</string>
+  <key>CFBundleExecutable</key><string>PhotoTidy</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleVersion</key><string>@VERSION@</string>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.photography</string>
+  <key>LSArchitecturePriority</key><array><string>arm64</string></array>
+  <key>LSMultipleInstancesProhibited</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>MIT License. Photo Tidy runs entirely on your Mac.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Photo Tidy reads your library on this Mac to find similar, blurry and screenshot photos, and creates a review album. It never deletes or edits photos, and nothing leaves your Mac.</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Photo Tidy creates a new "Tidy Review" album containing the photos you choose to review. Nothing is deleted or changed.</string>
+  <key>NSAppTransportSecurity</key>
+  <dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict>
+</plist>
