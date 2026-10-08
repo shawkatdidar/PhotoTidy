@@ -1,63 +1,93 @@
-# Photo Tidy
+<p align="center">
+  <img src="docs/assets/app-icon.png" alt="Photo Tidy app icon" width="88">
+</p>
 
-Find near-duplicate photos, screenshots and blurry shots in your Mac's Photos library, and clean them up safely.
-**100% local.** Photos are analysed on your Mac with a small open AI model. Nothing is uploaded, ever.
+<h1 align="center">Photo Tidy</h1>
 
-- **Similar photos**: groups bursts and near-identical shots, keeps the best one (favorites and edited photos win), and only suggests removing photos that are almost identical to the keeper.
-- **Screenshots** and **blurry photos** are listed separately and are never pre-selected.
-- **Explore**: search your indexed photos with a phrase, or click the magnifier on a photo to find visual matches. Matching runs locally with the same EmbeddingGemma 2 model; search results are ranked similarities, not exact labels.
-- **Collections**: browse virtual events grouped by capture time, with visually related scenes inside each event. These are rebuilt from the local index and do not create Photos albums.
-- **Safe by design**: Photo Tidy never deletes or edits anything. You choose photos, it creates a new **"Tidy Review"** album in Photos, and you delete from there. Photos keeps deleted items in *Recently Deleted* for 30 days.
+<p align="center">
+  Find the photos that matter. Clear the clutter.<br>
+  A private photo companion for Mac.
+</p>
 
-## Install
+<p align="center">
+  <a href="https://github.com/shawkatdidar/PhotoTidy/releases/download/v1.1.0/PhotoTidy-1.1.0.dmg"><strong>Download for Mac</strong></a>
+  &nbsp;·&nbsp; <a href="https://buildtube.app/PhotoTidy/">Explore the website</a>
+  &nbsp;·&nbsp; <a href="https://buymeacoffee.com/shawkatm_1776">Support the project</a>
+</p>
 
-1. Download `PhotoTidy-x.y.z.dmg` from the [Releases](../../releases) page and drag **Photo Tidy** to Applications.
-2. The current build is **not signed or notarized by Apple**, so macOS may block the first launch. Try opening the app once, then go to *System Settings > Privacy & Security > Open Anyway*. Only open software you downloaded from a source you trust.
-3. The welcome screen shows how scanning, review, and album creation work. Use **Check this Mac** for a local compatibility check, then **Check access** to see whether Photo Tidy can read your library. If macOS blocks it, enable Photo Tidy in *System Settings > Privacy & Security > Full Disk Access*, then reopen the app.
-4. Open the library. On first use, click **Download Model** to get [EmbeddingGemma 2](https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm) (485 MB, once, checksum-verified). This is the app's only network download; photos stay on your Mac.
-5. Click **Scan Library**. macOS may ask to let Photo Tidy access Photos data. Then use **Explore** for phrase search, a photo's magnifier for similar images, or **Collections** for local scene and event groups. Photos album permission is requested later, only when you create a review album.
+<p align="center"><sub>Free and open source · Apple Silicon · macOS 13 or later</sub></p>
 
-Requires an **Apple Silicon** Mac (M1 or newer) on **macOS 13 or later**. Allow about **485 MB** for the one-time model download and additional space for thumbnails and the analysis cache, which grows with library size. **8 GB RAM** and **2 GB free storage** are practical suggestions, not tested hard minimums. The bundled app itself is about **220 MB**. The preflight button checks the Mac locally and distinguishes requirements from suggestions. Works with the system Photos library, including iCloud Photos libraries with "Optimize Mac Storage" (it uses the previews already on your Mac).
+![Three printed photos on a light tabletop](docs/assets/readme-hero.png)
+
+Photo Tidy finds similar shots, screenshots, and blurry photos in your Mac's Photos library. **Your photos stay on your Mac.** The model runs locally; the app does not upload your library. Once the model has downloaded, you can even turn off Wi-Fi and keep using it.
+
+## A calmer way to clean up
+
+| Find | Explore | Review |
+| :--- | :--- | :--- |
+| See near-duplicate groups, screenshots, and blurry shots. | Search with a phrase, find visual matches, and browse local event collections. | Choose what to keep. Send selected photos to a **Tidy Review** album in Photos. |
+
+Photo Tidy never deletes or edits your photos. You make the final decision in Apple Photos. Screenshots and blurry photos are never preselected.
 
 ## How it works
 
-| Piece | What it does |
-|---|---|
-| `photo_tidy/` (Python) | Reads the Photos database read-only with [osxphotos](https://github.com/RhetTbull/osxphotos), embeds each photo with [EmbeddingGemma 2](https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm) via LiteRT-LM on the Mac's GPU, groups similar photos, and serves the UI on `127.0.0.1` only. |
-| `app/main.swift` | Native window (WebKit), starts the bundled Python engine, and creates the review album with PhotoKit. |
-| Cache | `~/Library/Application Support/PhotoTidy/` holds the model, analysis cache and small thumbnails of your photos. Delete the folder to remove everything (menu: *Photo Tidy > Show Data Folder*). |
+```text
+Your Photos library       Local AI model          You decide
+       ◇                       ◇                     ◇
+Read existing previews  →  Find related photos  →  Review in Photos
+```
 
-Safety details: the local server binds to `127.0.0.1` with a random per-launch token and a Host-header check; the page loads no external assets (strict CSP); the window refuses to navigate anywhere but its own localhost page.
+The app reads your system Photos library, makes a local index, and uses [EmbeddingGemma 2](https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm) through LiteRT-LM to compare photos. The model is a **485 MB one-time download** from its publisher. Your photos and search stay local. The app's cache, model, and small thumbnails live in `~/Library/Application Support/PhotoTidy/`.
 
-A photo is pre-marked for removal only when it is at least 0.95 cosine-similar to the best shot of its group. The *Strictness* menu lets you loosen that (0.92 / 0.89). Review before you delete: it is a similarity model, not a mind reader.
+## Get started
 
-Phrase search uses the model's text encoder against the existing 768-dimensional photo embeddings. A collection starts a new event after a six-hour capture gap, then groups visually related photos within that event. Events need at least three indexed, non-screenshot photos to appear. Search and collections work offline after the one-time model download and scan.
+1. **Download** the [latest Mac disk image](https://github.com/shawkatdidar/PhotoTidy/releases/download/v1.1.0/PhotoTidy-1.1.0.dmg), open it, and drag **Photo Tidy** to Applications.
+2. **Open the app.** This build is not Apple notarized. If macOS blocks it, try opening it once, then choose **System Settings → Privacy & Security → Open Anyway**. Only open software from a source you trust.
+3. **Check your Mac and access.** The welcome screen has **Check this Mac** and **Check access** buttons. If Photos access is blocked, grant **Full Disk Access** in System Settings and reopen the app.
+4. **Download the model** when prompted, then **Scan Library**. macOS may request access to Photos data. Album permission is requested later, when you create a review album.
+5. **Explore and review.** Search by phrase, tap a photo's magnifier for visual matches, or browse Collections. Add photos you choose to the Tidy Review album.
+
+| Mac requirement | Details |
+| :--- | :--- |
+| System | Apple Silicon (M1 or newer), macOS 13 or later |
+| Practical recommendation | 8 GB RAM and 2 GB free storage; the cache grows with your library |
+| Library | Your system Photos library, including iCloud Photos with *Optimize Mac Storage* using previews already on the Mac |
+
+The in-app check separates requirements from recommendations. The app itself is about 220 MB, plus the model download and cache.
 
 ## Build from source
 
-```
-brew install uv                  # one-time
-./scripts/build_app.sh           # -> dist/Photo Tidy.app (own Python, native window, ad-hoc signed)
-./scripts/build_dmg.sh           # -> dist/PhotoTidy-<version>.dmg + .sha256
-```
+Install the Xcode Command Line Tools and [uv](https://docs.astral.sh/uv/), then run:
 
-Needs the Xcode Command Line Tools (`xcode-select --install`). To sign with your own Developer ID and notarize (needs an Apple Developer account):
-
-```
-SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/build_app.sh
-NOTARY_PROFILE=my-notary-profile ./scripts/build_dmg.sh
+```sh
+xcode-select --install
+brew install uv
+./scripts/build_app.sh
+./scripts/build_dmg.sh
 ```
 
-See [the distribution guide](docs/DISTRIBUTION.md) for certificate setup, verification, and hosting the direct download on BuildTube.
+The scripts produce `dist/Photo Tidy.app` and a disk image in `dist/`. To run the Python engine directly:
 
-Run from source without building: `uv venv && uv pip install -r requirements.txt && .venv/bin/python -m photo_tidy` (opens your browser; add `--dry-run` to never touch Photos).
+```sh
+uv venv
+uv pip install -r requirements.txt
+.venv/bin/python -m photo_tidy --dry-run
+```
 
-## Known limitations
+For Developer ID signing, notarization, and release verification, see the [distribution guide](docs/DISTRIBUTION.md).
 
-- Videos, Live Photo motion and shared-album photos are not analysed.
-- Ad-hoc signed builds lose their macOS permissions when you update to a new version; macOS will ask again.
-- Only the system Photos library is scanned.
+<details>
+<summary><strong>Technical and safety details</strong></summary>
+
+- The Python engine reads Photos through [osxphotos](https://github.com/RhetTbull/osxphotos) and serves the UI only on `127.0.0.1`. The native Swift window handles PhotoKit album creation.
+- The local server uses a random token for each launch and checks the Host header. The page loads no external assets, and the app window stays on its own local page.
+- Only very close matches are premarked for review (0.95 cosine similarity by default). You can adjust strictness in the app; always review the suggestions.
+- Search compares the model's text output with the local photo index. Collections group photos by capture time and visual similarity; they do not create Photos albums.
+- Videos, Live Photo motion, and shared-album photos are not analyzed. Only the system Photos library is scanned.
+- This release is ad-hoc signed. macOS may ask for permissions again after an update.
+
+</details>
 
 ## License
 
-MIT for Photo Tidy's code. Third-party: EmbeddingGemma 2 (Apache-2.0, downloaded from its publisher, not redistributed here), LiteRT-LM (Apache-2.0), osxphotos (MIT), NumPy (BSD), Pillow (HPND), Python (PSF).
+Photo Tidy's code is [MIT licensed](LICENSE). The separately downloaded EmbeddingGemma 2 model and LiteRT-LM are Apache-2.0; osxphotos is MIT, NumPy is BSD, Pillow is HPND, and Python uses the PSF license.
